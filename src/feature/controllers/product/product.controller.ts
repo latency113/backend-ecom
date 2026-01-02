@@ -24,18 +24,26 @@ export namespace ProductController {
     }
     export const createProductHandler = async (req: Request, res: Response) => {
         try {
-            const { name, description, price, stock, imgUrl, categoryId } = req.body;
-            const newProduct = await ProductService.createProduct({ name, description, price, stock, imgUrl, categoryId });
+            const { name, description, categoryId } = req.body;
+            const price = parseFloat(req.body.price); // Convert price to float
+            const stock = parseInt(req.body.stock);   // Convert stock to integer
+
+            const imageFile = req.file ? { originalname: req.file.originalname, buffer: req.file.buffer } : undefined;
+            const newProduct = await ProductService.createProduct({ name, description, price, stock, categoryId }, imageFile);
             res.status(201).json({ message: "Product created successfully", data: newProduct });
-        } catch (error) {
-            res.status(400).json({ message: "Error creating product", error });
+        } catch (error: any) {
+            console.error("Error creating product:", error); // Log the full error for debugging
+            res.status(400).json({ 
+                message: "Error creating product", 
+                error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+            });
         }
     }
     export const updateProductHandler = async (req: Request, res: Response) => {
         try {
             const productId = req.params.id;
-            const { name, description, price, stock, imgUrl, categoryId } = req.body;
-            const updatedProduct = await ProductService.updateProduct(productId, { name, description, price, stock, imgUrl, categoryId });
+            const { name, description, price, stock, categoryId } = req.body;
+            const updatedProduct = await ProductService.updateProduct(productId, { name, description, price, stock, categoryId });
             res.status(200).json({ message: "Product updated successfully", data: updatedProduct });
         } catch (error) {
             res.status(400).json({ message: "Error updating product", error });

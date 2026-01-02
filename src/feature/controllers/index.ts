@@ -2,6 +2,9 @@ import { Express, Request, Response } from "express";
 import { UserController } from "./user/user.controller";
 import { CategoryController } from "./category/category.controller";
 import { ProductController } from "./product/product.controller";
+import multer from 'multer';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const userControllers = (app: Express) => {
   app.get("/users", UserController.getAllUsersHandler);
@@ -22,7 +25,7 @@ export const categoryControllers = (app: Express) => {
 export const productController =  (app: Express) => {
   app.get("/products", ProductController.getAllProductsHandler);
   app.get("/products/:id", ProductController.getProductByIdHandler);
-  app.post("/products", ProductController.createProductHandler);
+  app.post("/products", upload.single('image'), ProductController.createProductHandler);
   app.put("/products/:id", ProductController.updateProductHandler);
   app.delete("/products/:id", ProductController.deleteProductHandler);
 }

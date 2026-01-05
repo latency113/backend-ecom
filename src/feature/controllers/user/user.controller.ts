@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CreateUserSchema, UpdateUserSchema } from "../../services/user/user.schema.js";
+import { CreateUserSchema, UpdateUserSchemaWithPassword } from "../../services/user/user.schema.js";
 import { UserService } from "../../services/user/user.service.js";
 
 export namespace UserController {
@@ -9,10 +9,32 @@ export namespace UserController {
       res
         .status(200)
         .json({ message: "Users retrieved successfully", data: users });
-    } catch (error) {
-      res.status(500).json({ message: "Error retrieving users", error });
+    } catch (error: any) {
+      console.error("Error retrieving users:", error);
+      res.status(500).json({ 
+          message: "Error retrieving users", 
+          error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+      });
     }
   };
+
+  export const getUserByIdHandler = async (req: Request, res: Response) => {
+    try {
+        const userId = req.params.id;
+        const user = await UserService.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json({ message: "User retrieved successfully", data: user });
+    } catch (error: any) {
+        console.error("Error retrieving user:", error);
+        res.status(500).json({ 
+            message: "Error retrieving user", 
+            error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+        });
+    }
+  };
+
   export const createUserHandler = async (req: Request, res: Response) => {
     try {
       const parsedData = CreateUserSchema.parse(req.body);
@@ -20,22 +42,32 @@ export namespace UserController {
       res
         .status(201)
         .json({ message: "User created successfully", data: user });
-    } catch (error) {
-      res.status(400).json({ message: "Error creating user", error });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(400).json({ 
+          message: "Error creating user", 
+          error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+      });
     }
   };
+
   export const updateUserHandler = async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      const parsedData = UpdateUserSchema.parse(req.body);
+      const parsedData = UpdateUserSchemaWithPassword.parse(req.body); // Use updated schema
       const user = await UserService.updateUser(userId, parsedData);
       res
         .status(200)
         .json({ message: "User updated successfully", data: user });
-    } catch (error) {
-      res.status(400).json({ message: "Error updating user", error });
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      res.status(400).json({ 
+          message: "Error updating user", 
+          error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+      });
     }
   };
+
   export const deleteUserHandler = async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
@@ -43,8 +75,12 @@ export namespace UserController {
       res
         .status(200)
         .json({ message: "User deleted successfully", data: user });
-    } catch (error) {
-      res.status(400).json({ message: "Error deleting user", error });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(400).json({ 
+          message: "Error deleting user", 
+          error: error instanceof Error ? { message: error.message, stack: error.stack } : error 
+      });
     }
   };
 }

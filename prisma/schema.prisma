@@ -35,7 +35,7 @@ model User {
   username String  @unique
   password String
   fullName String
-  address  String? @db.Text
+  // address  String? @db.Text // Removed, addresses will be managed separately
   phone    String?
   role     Role    @default(USER)
 
@@ -43,6 +43,24 @@ model User {
   orders  Order[]
   cart    Cart?
   reviews Review[]
+  addresses Address[] // New: User can have multiple addresses
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  label        String? // e.g., Home, Work, Primary
+  street       String
+  city         String
+  stateProvince String? // e.g., State, Province
+  postalCode   String
+  country      String
+  isDefault    Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -89,6 +107,8 @@ model CartItem {
   quantity  Int     @default(1)
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
 }
 
 model Order {

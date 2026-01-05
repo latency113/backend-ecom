@@ -1,5 +1,5 @@
 import { CategoryRepository } from "@/feature/repositories/category/category.repository";
-import { CategorySchema } from "./category.schema";
+import { CategorySchema, CreateCategory, UpdateCategory } from "./category.schema";
 
 export namespace CategoryService {
     export const getAllCategories = async () => {
@@ -13,12 +13,12 @@ export namespace CategoryService {
         return CategorySchema.parse(category);
     }
 
-    export const createCategory = async (data: { name: string; description?: string }) => {
+    export const createCategory = async (data: CreateCategory) => {
         const newCategory = await CategoryRepository.createCategory(data);
         return CategorySchema.parse(newCategory);
     }
 
-    export const updateCategory = async (id: string, data: { name?: string; description?: string }) => {
+    export const updateCategory = async (id: string, data: UpdateCategory) => {
         const updatedCategory = await CategoryRepository.updateCategory(id, data);
         return CategorySchema.parse(updatedCategory);
     }

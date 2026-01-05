@@ -1,5 +1,5 @@
 import { UserRepository } from "@/feature/repositories/user/user.repository";
-import { UserSchema } from "./user.schema";
+import { UpdateUserInput, UserSchema } from "./user.schema";
 import bcrypt from "bcrypt";
 
 export namespace UserService {
@@ -16,11 +16,14 @@ export namespace UserService {
 
     export const createUser = async (data: { username: string; email: string; password: string; fullName: string }) => {
         const hashedPassword = await bcrypt.hash(data.password, 10);
-        const newUser = await UserRepository.createUser({ ...data, password: hashedPassword });
+        const newUser = await UserRepository.createUser({ ...data, password: hashedPassword ,role: 'USER'});
         return UserSchema.parse(newUser);
     }
 
-    export const updateUser = async (id: string, data: { username?: string; email?: string; password?: string; fullName?: string }) => {
+    export const updateUser = async (id: string, data: UpdateUserInput) => {
+        if (data.password) {
+            data.password = await bcrypt.hash(data.password, 10);
+        }
         const updatedUser = await UserRepository.updateUser(id, data);
         return UserSchema.parse(updatedUser);
     }

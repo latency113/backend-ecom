@@ -1,27 +1,48 @@
 import { ProductRepository } from "@/feature/repositories/product/product.repository";
-import { ProductSchema } from "./product.schema";
+import { ProductSchema, CreateProduct, UpdateProduct } from "./product.schema"; // Import CreateProduct and UpdateProduct
 import { FileUploadService } from "@/utils/fileUpload.service";
 
 export namespace ProductService {
-  export const getAllProducts = async () => {
-    const products = await ProductRepository.getAllProducts();
-    return products.map((product) => ProductSchema.parse(product));
+  interface PaginationOptions {
+    page?: number;
+    limit?: number;
+  }
+
+  interface PaginatedResponse<T> {
+    data: T[];
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+  }
+
+  export const getAllProducts = async (options?: PaginationOptions): Promise<PaginatedResponse<ProductSchema>> => {
+    const page = options?.page ? Math.max(1, options.page) : 1;
+    const limit = options?.limit ? Math.max(1, options.limit) : 10;
+    const skip = (page - 1) * limit;
+
+    const { data, totalCount } = await ProductRepository.getAllProducts({ skip, take: limit });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      data,
+      totalCount,
+      currentPage: page,
+      totalPages,
+    };
   };
 
   export const createProduct = async (
-    data: {
-      name: string;
-      description?: string;
-      price: number;
-      stock?: number;
-      categoryId: string;
-    },
+    data: CreateProduct, // Use CreateProduct type
     imageFile?: { originalname: string; buffer: Buffer }
   ) => {
     let imgUrl: string | undefined;
     if (imageFile) {
       const relativePath = await FileUploadService.uploadImage(imageFile);
-      const baseUrl = process.env.UPLOADS_BASE_URL || "http://localhost:3000"; // Use base URL from env or default
+      const baseUrl = process.env.UPLOADS_BASE_URL; // Use UPLOADS_BASE_URL from env
+      if (!baseUrl) {
+        throw new Error("UPLOADS_BASE_URL environment variable is not set.");
+      }
       imgUrl = `${baseUrl}${relativePath}`; // Construct absolute URL
     }
     const newProduct = await ProductRepository.createProduct({
@@ -39,19 +60,16 @@ export namespace ProductService {
 
   export const updateProduct = async (
     id: string,
-    data: {
-      name?: string;
-      description?: string;
-      price?: number;
-      stock?: number;
-      categoryId?: string;
-    },
+    data: UpdateProduct, // Use UpdateProduct type
     imageFile?: { originalname: string; buffer: Buffer }
   ) => {
     let imgUrl: string | undefined;
     if (imageFile) {
       const relativePath = await FileUploadService.uploadImage(imageFile);
-      const baseUrl = process.env.UPLOADS_BASE_URL || "http://localhost:3000"; // Use base URL from env or default
+      const baseUrl = process.env.UPLOADS_BASE_URL; // Use UPLOADS_BASE_URL from env
+      if (!baseUrl) {
+        throw new Error("UPLOADS_BASE_URL environment variable is not set.");
+      }
       imgUrl = `${baseUrl}${relativePath}`; // Construct absolute URL
     }
     const updatedProduct = await ProductRepository.updateProduct(id, {
@@ -64,5 +82,22 @@ export namespace ProductService {
   export const deleteProduct = async (id: string) => {
     const deletedProduct = await ProductRepository.deleteProduct(id);
     return ProductSchema.parse(deletedProduct);
+  };
+
+  export const getProductsByCategoryId = async (categoryId: string, options?: PaginationOptions): Promise<PaginatedResponse<ProductSchema>> => {
+    const page = options?.page ? Math.max(1, options.page) : 1;
+    const limit = options?.limit ? Math.max(1, options.limit) : 10;
+    const skip = (page - 1) * limit;
+
+    const { data, totalCount } = await ProductRepository.getProductsByCategoryId(categoryId, { skip, take: limit });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      data,
+      totalCount,
+      currentPage: page,
+      totalPages,
+    };
   };
 }

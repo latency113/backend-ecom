@@ -16,7 +16,7 @@ export namespace FileUploadService {
         await fs.writeFile(filePath, file.buffer);
 
         // Construct the URL relative to the static serving path, which will be '/uploads'
-        const imgUrl = `/uploads/${fileName}`;
+        const imgUrl = `/api/v1/uploads/${fileName}`;
 
         console.log(`Image uploaded to: ${filePath}, URL: ${imgUrl}`);
 

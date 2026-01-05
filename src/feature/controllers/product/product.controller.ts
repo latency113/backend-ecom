@@ -7,8 +7,10 @@ export namespace ProductController {
         try {
             const page = parseInt(req.query.page as string) || 1;
             const limit = parseInt(req.query.limit as string) || 10;
+            const searchTerm = req.query.searchTerm as string || "";
+            const categoryId = req.query.categoryId as string || undefined;
 
-            const { data, totalCount, currentPage, totalPages } = await ProductService.getAllProducts({ page, limit });
+            const { data, totalCount, currentPage, totalPages } = await ProductService.getAllProducts({ page, limit, searchTerm, categoryId });
             
             res.status(200).json({
                 message: "Products retrieved successfully",

@@ -69,7 +69,7 @@ export namespace OrderService {
 
       const order = await tx.order.create({
         data: orderCreateInput,
-        include: { items: { include: { product: true } } }, // Include items and product data
+        include: { items: { include: { product: true } }, user: true }, // Include items, product data, and user
       });
 
       // 3. Decrement product stocks
@@ -143,7 +143,7 @@ export namespace OrderService {
 
         data: { status: "CANCELLED" },
 
-        include: { items: { include: { product: true } } }, // Include items and product data
+        include: { items: { include: { product: true } }, user: true }, // Include items, product data, and user
       });
 
       return updatedOrder;

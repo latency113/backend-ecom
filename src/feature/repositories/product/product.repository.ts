@@ -6,7 +6,8 @@ export namespace ProductRepository {
     interface PaginationParams {
         skip?: number;
         take?: number;
-        where?: Prisma.ProductWhereInput;
+        searchTerm?: string;
+        categoryId?: string;
     }
 
     interface PaginatedResult<T> {
@@ -15,7 +16,19 @@ export namespace ProductRepository {
     }
 
     export const getAllProducts = async (params?: PaginationParams): Promise<PaginatedResult<ProductSchema>> => {
-        const { skip, take, where } = params || {};
+        const { skip, take, searchTerm, categoryId } = params || {};
+
+        const where: Prisma.ProductWhereInput = {};
+
+        if (searchTerm) {
+            where.name = {
+                contains: searchTerm,
+            };
+        }
+
+        if (categoryId) {
+            where.categoryId = categoryId;
+        }
 
         const products = await prisma.product.findMany({
             skip,

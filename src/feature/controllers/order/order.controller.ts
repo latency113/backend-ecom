@@ -6,6 +6,7 @@ import {
 } from "@/feature/services/order/order.schema";
 import { AuthRequest } from "@/types/auth"; // Import AuthRequest
 import z from "zod";
+import { AddressService } from "@/feature/services/address/address.service";
 
 export namespace OrderController {
   export const getAllOrdersHandler = async (req: Request, res: Response) => {
@@ -64,16 +65,32 @@ export namespace OrderController {
             price: z.number().nonnegative(),
           })
         ),
-        address: z.string().min(5).max(500),
+        addressId: z.string().uuid(), // Expect addressId instead of address string
       });
 
-      const { cartItems, address } = IncomingOrderSchema.parse(req.body);
+      const { cartItems, addressId } = IncomingOrderSchema.parse(req.body);
+
+      // Fetch the full address details using the addressId
+      const selectedAddress = await AddressService.getAddressById(addressId);
+
+      if (!selectedAddress || selectedAddress.userId !== userId) {
+        return res.status(404).json({ message: "Address not found or not authorized for this user." });
+      }
+
+      // Format the address string for storage in the Order model
+      const formattedAddress = `${selectedAddress.street}, ${
+        selectedAddress.city
+      }, ${
+        selectedAddress.stateProvince
+          ? selectedAddress.stateProvince + ", "
+          : ""
+      }${selectedAddress.postalCode}, ${selectedAddress.country}`;
 
       // The service will calculate totalAmount
       const newOrder = await OrderService.createOrder(
         userId,
         cartItems,
-        address
+        formattedAddress
       );
       res
         .status(201)

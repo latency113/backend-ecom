@@ -6,6 +6,8 @@ export namespace ProductService {
   interface PaginationOptions {
     page?: number;
     limit?: number;
+    searchTerm?: string;
+    categoryId?: string;
   }
 
   interface PaginatedResponse<T> {
@@ -18,9 +20,11 @@ export namespace ProductService {
   export const getAllProducts = async (options?: PaginationOptions): Promise<PaginatedResponse<ProductSchema>> => {
     const page = options?.page ? Math.max(1, options.page) : 1;
     const limit = options?.limit ? Math.max(1, options.limit) : 10;
+    const searchTerm = options?.searchTerm;
+    const categoryId = options?.categoryId;
     const skip = (page - 1) * limit;
 
-    const { data, totalCount } = await ProductRepository.getAllProducts({ skip, take: limit });
+    const { data, totalCount } = await ProductRepository.getAllProducts({ skip, take: limit, searchTerm, categoryId });
 
     const totalPages = Math.ceil(totalCount / limit);
 

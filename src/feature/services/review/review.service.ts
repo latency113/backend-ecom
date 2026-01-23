@@ -19,6 +19,10 @@ export namespace ReviewService {
   };
 
   export const createReview = async (data: CreateReview) => {
+    const existingReview = await ReviewRepository.findReviewByUserAndProduct(data.userId, data.productId);
+    if (existingReview) {
+      throw new Error("You have already reviewed this product.");
+    }
     const newReview = await ReviewRepository.createReview(data);
     return ReviewSchema.parse(newReview);
   };

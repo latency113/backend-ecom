@@ -9,6 +9,9 @@ export const ReviewSchema = z.object({
   createdAt: z.preprocess((arg) => {
     if (typeof arg == "string" || arg instanceof Date) return new Date(arg);
   }, z.date()),
+  user: z.object({
+    username: z.string()
+  }).optional(),
 });
 
 export const CreateReviewSchema = z.object({

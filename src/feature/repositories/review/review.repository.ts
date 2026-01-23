@@ -5,18 +5,23 @@ export namespace ReviewRepository {
   export const getReviewsByProductId = async (productId: string) => {
     const reviews = await prisma.review.findMany({
       where: { productId },
+      include: { user: { select: { username: true } } },
+      orderBy: { createdAt: 'desc' }
     });
     return reviews.map((review) => ReviewSchema.parse(review));
   };
 
   export const getAllReviews = async () => {
-    const reviews = await prisma.review.findMany();
+    const reviews = await prisma.review.findMany({
+      include: { user: { select: { username: true } } }
+    });
     return reviews.map((review) => ReviewSchema.parse(review));
   };
 
   export const getReviewById = async (id: string) => {
     const review = await prisma.review.findUnique({
       where: { id },
+      include: { user: { select: { username: true } } }
     });
     return review ? ReviewSchema.parse(review) : null;
   };
@@ -24,6 +29,7 @@ export namespace ReviewRepository {
   export const createReview = async (data: CreateReview) => {
     const newReview = await prisma.review.create({
       data,
+      include: { user: { select: { username: true } } }
     });
     return ReviewSchema.parse(newReview);
   };
@@ -41,5 +47,12 @@ export namespace ReviewRepository {
       where: { id },
     });
     return ReviewSchema.parse(deletedReview);
+  };
+
+  export const findReviewByUserAndProduct = async (userId: string, productId: string) => {
+    const review = await prisma.review.findFirst({
+      where: { userId, productId },
+    });
+    return review ? ReviewSchema.parse(review) : null;
   };
 }

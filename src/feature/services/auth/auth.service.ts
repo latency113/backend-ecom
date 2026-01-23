@@ -14,9 +14,9 @@ export namespace AuthService {
 
   export const verifyToken = (token: string): { userId: string; email: string; role: string } | null => {
     try {
-      console.log("AuthService.verifyToken: Verifying token with secret:", JWT_SECRET);
+      // console.log("AuthService.verifyToken: Verifying token with secret:", JWT_SECRET);
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string };
-      console.log("AuthService.verifyToken: Token successfully decoded:", decoded);
+      // console.log("AuthService.verifyToken: Token successfully decoded:", decoded);
       return decoded;
     } catch (error) {
       console.error("AuthService.verifyToken: Token verification failed:", error);

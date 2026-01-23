@@ -33,3 +33,48 @@ export const getDashboardStats = async () => {
     pendingOrders,
   };
 };
+
+export const getRevenueReport = async () => {
+  // Aggregate revenue by status, excluding CANCELLED orders
+  const orders = await prisma.order.findMany({
+    where: {
+      status: {
+        not: "CANCELLED"
+      }
+    },
+    select: {
+      totalAmount: true,
+      status: true,
+      createdAt: true,
+    }
+  });
+
+  const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const completedRevenue = orders
+    .filter(o => o.status === "DELIVERED")
+    .reduce((sum, order) => sum + order.totalAmount, 0);
+  
+  const pendingRevenue = orders
+    .filter(o => o.status === "PENDING" || o.status === "PROCESSING" || o.status === "SHIPPED")
+    .reduce((sum, order) => sum + order.totalAmount, 0);
+
+  // Group by month for chart/table
+  const monthlyRevenue: Record<string, number> = {};
+  orders.forEach(order => {
+    const month = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
+    monthlyRevenue[month] = (monthlyRevenue[month] || 0) + order.totalAmount;
+  });
+
+  const monthlyData = Object.keys(monthlyRevenue).sort().map(month => ({
+    month,
+    revenue: monthlyRevenue[month]
+  }));
+
+  return {
+    totalRevenue,
+    completedRevenue,
+    pendingRevenue,
+    monthlyData,
+    totalOrders: orders.length
+  };
+};

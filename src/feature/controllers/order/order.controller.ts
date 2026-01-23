@@ -11,10 +11,20 @@ import { AddressService } from "@/feature/services/address/address.service";
 export namespace OrderController {
   export const getAllOrdersHandler = async (req: Request, res: Response) => {
     try {
-      const orders = await OrderService.getAllOrders();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const searchTerm = (req.query.searchTerm as string) || "";
+      const statusFilter = (req.query.statusFilter as string) || "all";
+
+      const result = await OrderService.getAllOrders(
+        page,
+        limit,
+        searchTerm,
+        statusFilter
+      );
       res
         .status(200)
-        .json({ message: "Orders retrieved successfully", data: orders });
+        .json({ message: "Orders retrieved successfully", ...result });
     } catch (error: any) {
       console.error("Error retrieving orders:", error);
       res.status(500).json({
@@ -66,9 +76,20 @@ export namespace OrderController {
           })
         ),
         addressId: z.string().uuid(), // Expect addressId instead of address string
+        paymentMethod: z.string().optional().default("COD"),
+        paymentSlip: z.string().nullable().optional(),
       });
 
-      const { cartItems, addressId } = IncomingOrderSchema.parse(req.body);
+      const { cartItems, addressId, paymentMethod, paymentSlip } = IncomingOrderSchema.parse(req.body);
+
+      // Construct absolute URL for paymentSlip if it's a relative path
+      let absolutePaymentSlip = paymentSlip;
+      if (paymentSlip && paymentSlip.startsWith('/')) {
+        const baseUrl = process.env.UPLOADS_BASE_URL;
+        if (baseUrl) {
+          absolutePaymentSlip = `${baseUrl}${paymentSlip}`;
+        }
+      }
 
       // Fetch the full address details using the addressId
       const selectedAddress = await AddressService.getAddressById(addressId);
@@ -90,11 +111,18 @@ export namespace OrderController {
       const newOrder = await OrderService.createOrder(
         userId,
         cartItems,
-        formattedAddress
+        formattedAddress,
+        paymentMethod,
+        absolutePaymentSlip
       );
       res
         .status(201)
-        .json({ message: "Order created successfully", data: newOrder });
+        .json({ 
+          message: "Order created successfully", 
+          data: newOrder, 
+          debug_v: "v2_absolute_url",
+          ts: new Date().toISOString() 
+        });
     } catch (error: any) {
       console.log(error);
       if (error instanceof z.ZodError) {

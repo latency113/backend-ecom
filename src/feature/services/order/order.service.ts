@@ -2,12 +2,29 @@ import { OrderRepository } from "@/feature/repositories/order/order.repository";
 import { ProductRepository } from "@/feature/repositories/product/product.repository"; // Import ProductRepository
 import { OrderSchema, Order } from "./order.schema"; // Import Order type
 import prisma from "@/providers/database/database.provider";
+import { Prisma, OrderStatus } from "@/providers/database/generated/client";
 
 export namespace OrderService {
-  export const getAllOrders = async () => {
-    const orders = await OrderRepository.getAllOrders();
-    // Repository now returns raw Prisma models, so parse them here
-    return orders.map((order) => OrderSchema.parse(order));
+  export const getAllOrders = async (
+    page: number = 1,
+    limit: number = 10,
+    searchTerm: string = "",
+    statusFilter: string = "all"
+  ) => {
+    const { orders, totalCount } = await OrderRepository.getAllOrders(
+      page,
+      limit,
+      searchTerm,
+      statusFilter
+    );
+
+    return {
+      data: orders.map((order) => OrderSchema.parse(order)),
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+      itemsPerPage: limit,
+    };
   };
 
   export const getOrderById = async (id: string) => {
@@ -20,7 +37,9 @@ export namespace OrderService {
   export const createOrder = async (
     userId: string,
     orderItemsPayload: { productId: string; quantity: number; price: number }[],
-    address: string
+    address: string,
+    paymentMethod: string = "COD",
+    paymentSlip: string | null = null
   ): Promise<Order> => {
     // Start a Prisma transaction
     const newOrder = await prisma.$transaction(async (tx) => {
@@ -52,10 +71,26 @@ export namespace OrderService {
       }
 
       // 2. Create the order
+      const isCard = paymentMethod === "CARD";
+      const hasSlip = !!(paymentSlip && paymentSlip.trim().length > 0);
+      
+      const orderStatus = (isCard || (paymentMethod === "QR" && hasSlip)) 
+        ? OrderStatus.PROCESSING 
+        : OrderStatus.PENDING;
+      
+      console.log(`[OrderService] createOrder:`, {
+        paymentMethod,
+        hasSlip,
+        status: orderStatus
+      });
+
       const orderCreateInput: Prisma.OrderCreateInput = {
         user: { connect: { id: userId } },
         totalAmount: totalAmount,
         address: address,
+        paymentMethod: paymentMethod,
+        paymentSlip: paymentSlip,
+        status: orderStatus,
         items: {
           createMany: {
             data: orderItemsPayload.map((item) => ({
@@ -69,7 +104,12 @@ export namespace OrderService {
 
       const order = await tx.order.create({
         data: orderCreateInput,
-        include: { items: { include: { product: true } }, user: true }, // Include items, product data, and user
+        include: { items: { include: { product: true } }, user: true },
+      });
+
+      console.log(`[OrderService] Order Created in DB:`, {
+        id: order.id,
+        status: order.status
       });
 
       // 3. Decrement product stocks

@@ -41,14 +41,14 @@ export const productController = (app: Express) => {
     "/api/v1/products",
     authMiddleware,
     authorizeRoles('ADMIN'),
-    productUpload.single("image"), // Use the local multer instance
+    productUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
     ProductController.createProductHandler
   );
   app.put(
     "/api/v1/products/:id",
     authMiddleware,
     authorizeRoles('ADMIN'),
-    productUpload.single("image"), // Use the local multer instance
+    productUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
     ProductController.updateProductHandler
   );
   app.delete("/api/v1/products/:id", authMiddleware, authorizeRoles('ADMIN'), ProductController.deleteProductHandler);

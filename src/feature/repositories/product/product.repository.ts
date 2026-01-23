@@ -34,6 +34,9 @@ export namespace ProductRepository {
             skip,
             take,
             where,
+            include: {
+                images: true,
+            },
         });
 
         const totalCount = await prisma.product.count({ where });
@@ -47,6 +50,9 @@ export namespace ProductRepository {
     export const getProductById = async (id: string) => {
         const product = await prisma.product.findUnique({
             where: { id },
+            include: {
+                images: true,
+            },
         });
         return product ? ProductSchema.parse(product) : null;
     }
@@ -81,6 +87,9 @@ export namespace ProductRepository {
             skip,
             take,
             where: { categoryId },
+            include: {
+                images: true,
+            },
         });
 
         const totalCount = await prisma.product.count({

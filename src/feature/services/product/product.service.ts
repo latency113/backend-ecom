@@ -1,6 +1,7 @@
 import { ProductRepository } from "@/feature/repositories/product/product.repository";
 import { ProductSchema, CreateProduct, UpdateProduct } from "./product.schema"; // Import CreateProduct and UpdateProduct
 import { FileUploadService } from "@/utils/fileUpload.service";
+import prisma from "@/providers/database/database.provider";
 
 export namespace ProductService {
   interface PaginationOptions {
@@ -38,7 +39,8 @@ export namespace ProductService {
 
   export const createProduct = async (
     data: CreateProduct, // Use CreateProduct type
-    imageFile?: { originalname: string; buffer: Buffer }
+    imageFile?: { originalname: string; buffer: Buffer },
+    galleryFiles?: { originalname: string; buffer: Buffer }[]
   ) => {
     let imgUrl: string | undefined;
     if (imageFile) {
@@ -49,23 +51,47 @@ export namespace ProductService {
       }
       imgUrl = `${baseUrl}${relativePath}`; // Construct absolute URL
     }
+
+    const galleryUrls: string[] = [];
+    if (galleryFiles && galleryFiles.length > 0) {
+      const baseUrl = process.env.UPLOADS_BASE_URL;
+      if (!baseUrl) throw new Error("UPLOADS_BASE_URL is not set.");
+      
+      for (const file of galleryFiles) {
+        const relativePath = await FileUploadService.uploadImage(file);
+        galleryUrls.push(`${baseUrl}${relativePath}`);
+      }
+    }
+
     const newProduct = await ProductRepository.createProduct({
       ...data,
       imgUrl,
     });
-    return ProductSchema.parse(newProduct);
+
+    if (galleryUrls.length > 0) {
+      // Create ProductImage entries
+      await Promise.all(galleryUrls.map(url => prisma.productImage.create({
+        data: {
+          url,
+          productId: newProduct.id
+        }
+      })));
+    }
+
+    return getProductById(newProduct.id);
   };
 
   export const getProductById = async (id: string) => {
     const product = await ProductRepository.getProductById(id);
     if (!product) return null;
-    return ProductSchema.parse(product);
+    return product; // Already parsed by repo
   };
 
   export const updateProduct = async (
     id: string,
     data: UpdateProduct, // Use UpdateProduct type
-    imageFile?: { originalname: string; buffer: Buffer }
+    imageFile?: { originalname: string; buffer: Buffer },
+    galleryFiles?: { originalname: string; buffer: Buffer }[]
   ) => {
     let imgUrl: string | undefined;
     if (imageFile) {
@@ -76,11 +102,35 @@ export namespace ProductService {
       }
       imgUrl = `${baseUrl}${relativePath}`; // Construct absolute URL
     }
+
+    const galleryUrls: string[] = [];
+    if (galleryFiles && galleryFiles.length > 0) {
+      const baseUrl = process.env.UPLOADS_BASE_URL;
+      if (!baseUrl) throw new Error("UPLOADS_BASE_URL is not set.");
+      
+      for (const file of galleryFiles) {
+        const relativePath = await FileUploadService.uploadImage(file);
+        galleryUrls.push(`${baseUrl}${relativePath}`);
+      }
+    }
+
     const updatedProduct = await ProductRepository.updateProduct(id, {
       ...data,
       imgUrl,
     });
-    return ProductSchema.parse(updatedProduct);
+
+    if (galleryUrls.length > 0) {
+       // Optional: clear existing or just add? Usually we might want to replace or just add.
+       // For simplicity, let's just add for now.
+       await Promise.all(galleryUrls.map(url => prisma.productImage.create({
+        data: {
+          url,
+          productId: updatedProduct.id
+        }
+      })));
+    }
+
+    return getProductById(updatedProduct.id);
   };
 
   export const deleteProduct = async (id: string) => {

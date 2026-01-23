@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Order` ADD COLUMN `paymentMethod` VARCHAR(191) NOT NULL DEFAULT 'COD',
+    ADD COLUMN `paymentSlip` VARCHAR(191) NULL;

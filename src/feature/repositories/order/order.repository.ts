@@ -2,18 +2,48 @@ import prisma from "@/providers/database/database.provider";
 import { Prisma } from "@prisma/client"; // Import Prisma for types
 
 export namespace OrderRepository {
-  export const getAllOrders = async () => {
-    // Return raw Prisma models, service will handle parsing
-    return prisma.order.findMany({
-      include: {
-        items: {
-          include: {
-            product: true,
+  export const getAllOrders = async (
+    page: number = 1,
+    limit: number = 10,
+    searchTerm: string = "",
+    statusFilter: string = "all"
+  ) => {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.OrderWhereInput = {};
+
+    if (statusFilter !== "all") {
+      where.status = statusFilter as any;
+    }
+
+    if (searchTerm) {
+      where.OR = [
+        { id: { contains: searchTerm } },
+        { user: { fullName: { contains: searchTerm } } },
+        { user: { email: { contains: searchTerm } } },
+        { user: { username: { contains: searchTerm } } },
+      ];
+    }
+
+    const [orders, totalCount] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
+          user: true,
         },
-        user: true, // Include user data
-      },
-    });
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return { orders, totalCount };
   };
 
   export const getOrderById = async (id: string) => {

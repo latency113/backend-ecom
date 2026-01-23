@@ -47,19 +47,28 @@ export namespace ProductController {
     export const createProductHandler = async (req: Request, res: Response) => {
         try {
             console.log("ProductController.createProductHandler: req.body", req.body);
-            console.log("ProductController.createProductHandler: req.file", req.file);
-            console.log("ProductController.createProductHandler: Content-Type", req.headers['content-type']);
-            // Data from req.body after multer processing (text fields are strings)
+            console.log("ProductController.createProductHandler: req.files", req.files);
+            
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+            const mainImage = files?.['image']?.[0];
+            const galleryImages = files?.['images'] || [];
+
             const parsedBody = {
               name: req.body.name,
               description: req.body.description,
               price: parseFloat(req.body.price), // Convert price to float
+              originalPrice: req.body.originalPrice ? parseFloat(req.body.originalPrice) : undefined, // Convert originalPrice to float
+              promotionStart: req.body.promotionStart || undefined,
+              promotionEnd: req.body.promotionEnd || undefined,
               stock: parseInt(req.body.stock),   // Convert stock to integer
               categoryId: req.body.categoryId
             }
             const parsedData = CreateProductSchema.parse(parsedBody); // Validate with Zod
-            const imageFile = req.file ? { originalname: req.file.originalname, buffer: req.file.buffer } : undefined;
-            const newProduct = await ProductService.createProduct(parsedData, imageFile); // Pass imageFile
+            
+            const imageFile = mainImage ? { originalname: mainImage.originalname, buffer: mainImage.buffer } : undefined;
+            const galleryFiles = galleryImages.map(file => ({ originalname: file.originalname, buffer: file.buffer }));
+
+            const newProduct = await ProductService.createProduct(parsedData, imageFile, galleryFiles);
             res.status(201).json({ message: "Product created successfully", data: newProduct });
         } catch (error: any) {
             console.error("Error creating product:", error);
@@ -73,21 +82,29 @@ export namespace ProductController {
         try {
             const productId = req.params.id;
             console.log("ProductController.updateProductHandler: req.body", req.body);
-            console.log("ProductController.updateProductHandler: req.file", req.file);
-            console.log("ProductController.updateProductHandler: Content-Type", req.headers['content-type']);
-            // Data from req.body after multer processing (text fields are strings)
+            console.log("ProductController.updateProductHandler: req.files", req.files);
+
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+            const mainImage = files?.['image']?.[0];
+            const galleryImages = files?.['images'] || [];
+
             const rawBody = req.body;
             const dataToUpdate: any = {};
             if (rawBody.name) dataToUpdate.name = rawBody.name;
             if (rawBody.description) dataToUpdate.description = rawBody.description;
             if (rawBody.price) dataToUpdate.price = parseFloat(rawBody.price); // Convert price to float
+            if (rawBody.originalPrice !== undefined) dataToUpdate.originalPrice = rawBody.originalPrice ? parseFloat(rawBody.originalPrice) : null; // Convert originalPrice to float or null
+            if (rawBody.promotionStart !== undefined) dataToUpdate.promotionStart = rawBody.promotionStart || null;
+            if (rawBody.promotionEnd !== undefined) dataToUpdate.promotionEnd = rawBody.promotionEnd || null;
             if (rawBody.stock) dataToUpdate.stock = parseInt(rawBody.stock);   // Convert stock to integer
             if (rawBody.categoryId) dataToUpdate.categoryId = rawBody.categoryId;
 
             const parsedData = UpdateProductSchema.parse(dataToUpdate); // Validate with Zod
 
-            const imageFile = req.file ? { originalname: req.file.originalname, buffer: req.file.buffer } : undefined;
-            const updatedProduct = await ProductService.updateProduct(productId, parsedData, imageFile); // Pass imageFile
+            const imageFile = mainImage ? { originalname: mainImage.originalname, buffer: mainImage.buffer } : undefined;
+            const galleryFiles = galleryImages.map(file => ({ originalname: file.originalname, buffer: file.buffer }));
+
+            const updatedProduct = await ProductService.updateProduct(productId, parsedData, imageFile, galleryFiles);
             res.status(200).json({ message: "Product updated successfully", data: updatedProduct });
         } catch (error: any) {
             console.error("Error updating product:", error);
